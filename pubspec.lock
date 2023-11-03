@@ -241,14 +241,6 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "0.5.6"
-  dart_openai:
-    dependency: transitive
-    description:
-      name: dart_openai
-      sha256: "707f6975454513f4a6197125b5a0fbe92ab7cbe4b8ea9111e529a09d7a3ce0c3"
-      url: "https://pub.dev"
-    source: hosted
-    version: "4.0.0"
   dart_style:
     dependency: transitive
     description:
@@ -478,29 +470,27 @@ packages:
   langchain:
     dependency: "direct main"
     description:
-      path: "packages/langchain"
-      ref: "49d39e4615dfcdadbd4c921d02a5e6315c577af4"
-      resolved-ref: "49d39e4615dfcdadbd4c921d02a5e6315c577af4"
-      url: "https://github.com/tayormi/langchain_dart"
-    source: git
-    version: "0.0.13"
+      name: langchain
+      sha256: b76456fd07637d69784c1071c2dcb8f29a0ed0b17522aca989fdd1834e0ec7d8
+      url: "https://pub.dev"
+    source: hosted
+    version: "0.0.14"
   langchain_openai:
     dependency: "direct main"
     description:
       name: langchain_openai
-      sha256: d0abd93e82053e9ee8602309f6aa8b18b6998f207f64360e1663068033600449
+      sha256: df611471bb026428f6142f71a4b0c5a5e66cee7854db3ef8f66d075f26faeec8
       url: "https://pub.dev"
     source: hosted
-    version: "0.0.13"
+    version: "0.0.14+1"
   langchain_pinecone:
     dependency: "direct main"
     description:
-      path: "packages/langchain_pinecone"
-      ref: "49d39e4615dfcdadbd4c921d02a5e6315c577af4"
-      resolved-ref: "49d39e4615dfcdadbd4c921d02a5e6315c577af4"
-      url: "https://github.com/tayormi/langchain_dart"
-    source: git
-    version: "0.0.3"
+      name: langchain_pinecone
+      sha256: "1bd83be65a49ddea7a0d6cdbb226fe3687e74af140312eab0efcfacff1950e17"
+      url: "https://pub.dev"
+    source: hosted
+    version: "0.0.5"
   lints:
     dependency: transitive
     description:
@@ -565,6 +555,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "1.0.4"
+  openai_dart:
+    dependency: transitive
+    description:
+      name: openai_dart
+      sha256: "483ac5ece3f04cb92e448cb1c0fc573c33a160a83d4a23a7ec462ebd3293e3cc"
+      url: "https://pub.dev"
+    source: hosted
+    version: "0.0.1"
   package_config:
     dependency: transitive
     description:
