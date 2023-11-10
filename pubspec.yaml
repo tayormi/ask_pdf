@@ -16,24 +16,9 @@ dependencies:
   syncfusion_flutter_pdf: ^23.1.42
   path_provider: ^2.1.1
   pinecone: ^0.6.0
-  langchain_openai: ^0.0.13
-  langchain:
-    git:
-      url: https://github.com/tayormi/langchain_dart
-      ref: 49d39e4615dfcdadbd4c921d02a5e6315c577af4
-      path: packages/langchain
-  langchain_pinecone:
-    git:
-      url: https://github.com/tayormi/langchain_dart
-      ref: 49d39e4615dfcdadbd4c921d02a5e6315c577af4
-      path: packages/langchain_pinecone
-
-dependency_overrides:
-  langchain:
-    git:
-      url: https://github.com/tayormi/langchain_dart
-      ref: 49d39e4615dfcdadbd4c921d02a5e6315c577af4
-      path: packages/langchain
+  langchain: ^0.0.14
+  langchain_openai: ^0.0.14+1
+  langchain_pinecone: ^0.0.5
 
 dev_dependencies:
   flutter_test:

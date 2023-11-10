@@ -1,5 +1,3 @@
-import 'dart:convert';
-
 import 'package:ask_pdf/core/config.dart';
 import 'package:ask_pdf/services/langchain_service.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
@@ -30,30 +28,36 @@ final langchainServiceProvider = Provider<LangChainService>((ref) {
     environment: environment,
   );
 
-  final openAI = OpenAI(
-    apiKey: openAIApiKey,
+  final llm = OpenAI(apiKey: openAIApiKey, maxTokens: 500);
+
+  final pineconeRetriever = VectorStoreRetriever(
+    vectorStore: langchainPinecone,
+    searchType: VectorStoreSearchType.similarity(k: 10),
+  );
+
+  final retrievalQAChain = RetrievalQAChain.fromLlm(
+    llm: llm,
+    retriever: pineconeRetriever,
   );
 
   return LangchainServiceImpl(
     client: pineconeClient,
     langchainPinecone: langchainPinecone,
-    embeddings: embeddings,
-    openAI: openAI,
+    retrievalQAChain: retrievalQAChain,
   );
 });
 
 class LangchainServiceImpl implements LangChainService {
   final PineconeClient client;
   final Pinecone langchainPinecone;
-  final OpenAIEmbeddings embeddings;
-  final OpenAI openAI;
+  final RetrievalQAChain retrievalQAChain;
 
   LangchainServiceImpl({
     required this.client,
     required this.langchainPinecone,
-    required this.embeddings,
-    required this.openAI,
+    required this.retrievalQAChain,
   });
+
   @override
   Future<void> createPineConeIndex(
       String indexName, int vectorDimension) async {
@@ -84,48 +88,12 @@ class LangchainServiceImpl implements LangChainService {
   Future<String> queryPineConeVectorStore(
       String indexName, String query) async {
     try {
-      final index = await client.describeIndex(
-          indexName: indexName,
-          environment: dotenv.env['PINECONE_ENVIRONMENT']!);
-      final queryEmbedding = await embeddings.embedQuery(query);
-      final result = await PineconeClient(
-              apiKey: dotenv.env['PINECONE_API_KEY']!,
-              baseUrl:
-                  'https://${index.name}-${index.projectId}.svc.${index.environment}.pinecone.io')
-          .queryVectors(
-        indexName: index.name,
-        projectId: index.projectId,
-        environment: index.environment,
-        request: QueryRequest(
-          topK: 10,
-          vector: queryEmbedding,
-          includeMetadata: true,
-          includeValues: true,
-        ),
-      );
-      if (result.matches.isNotEmpty) {
-        final concatPageContent = result.matches.map((e) {
-          if (e.metadata == null) return '';
-          // check if the metadata has a 'pageContent' key
-          if (e.metadata!.containsKey('pageContent')) {
-            return e.metadata!['pageContent'];
-          } else {
-            return '';
-          }
-        }).join(' ');
-
-        final docChain = StuffDocumentsQAChain(llm: openAI);
-        final response = await docChain.call({
-          'input_documents': [Document(pageContent: concatPageContent)],
-          'question': query,
-        });
-
-        print(response);
-
-        return response['output'];
-      } else {
-        return 'No results found';
-      }
+      final result = await retrievalQAChain.invoke({
+        RetrievalQAChain.defaultInputKey: 'What did I say?',
+      });
+      final answer = result[RetrievalQAChain.defaultOutputKey];
+      print('Answer: $answer');
+      return answer;
     } catch (e) {
       print(e);
       throw Exception('Error querying pinecone index');
@@ -136,76 +104,9 @@ class LangchainServiceImpl implements LangChainService {
   Future<void> updatePineConeIndex(
       String indexname, List<Document> docs) async {
     try {
-      print("Retrieving Pinecone index...");
-      final index = await client.describeIndex(
-          indexName: indexname,
-          environment: dotenv.env['PINECONE_ENVIRONMENT']!);
-      print('Pinecone index retrieved: ${index.name}');
-
-      for (final doc in docs) {
-        print('Processing document: ${doc.metadata['source']}');
-        final txtPath = doc.metadata['source'] as String;
-        final text = doc.pageContent;
-
-        const textSplitter = RecursiveCharacterTextSplitter(chunkSize: 1000);
-
-        final chunks = textSplitter.createDocuments([text]);
-
-        print('Text split into ${chunks.length} chunks');
-
-        print(
-            'Calling OpenAI\'s Embedding endpoint documents with ${chunks.length} text chunks ...');
-
-        final chunksMap = chunks
-            .map(
-              (e) => Document(
-                id: e.id,
-                pageContent: e.pageContent.replaceAll(RegExp('/\n/g'), "  "),
-                metadata: doc.metadata,
-              ),
-            )
-            .toList();
-
-        final embeddingArrays = await embeddings.embedDocuments(chunksMap);
-        print('Finished embedding documents');
-        print(
-            'Creating ${chunks.length} vectors array with id, values, and metadata...');
-
-        const batchSize = 100;
-        for (int i = 0; i < chunks.length; i++) {
-          final chunk = chunks[i];
-          final embeddingArray = embeddingArrays[i];
-
-          List<Vector> chunkVectors = [];
-
-          final chunkVector =
-              Vector(id: '${txtPath}_$i', values: embeddingArray, metadata: {
-            ...chunk.metadata,
-            'loc': jsonEncode(chunk.metadata['loc']),
-            'pageContent': chunk.pageContent,
-            'txtPath': txtPath,
-          });
-
-          chunkVectors.add(chunkVector);
-
-          if (chunkVectors.length == batchSize || i == chunks.length - 1) {
-            await PineconeClient(
-                    apiKey: dotenv.env['PINECONE_API_KEY']!,
-                    baseUrl:
-                        'https://${index.name}-${index.projectId}.svc.${index.environment}.pinecone.io')
-                .upsertVectors(
-              indexName: index.name,
-              environment: index.environment,
-              projectId: index.projectId,
-              request: UpsertRequest(vectors: chunkVectors),
-            );
-
-            print('Pinecone index updated with ${chunkVectors.length} vectors');
-
-            chunkVectors = [];
-          }
-        }
-      }
+      print('Updating ${docs.length} documents...');
+      await langchainPinecone.addDocuments(documents: docs);
+      print('Done updating documents');
     } catch (e) {
       print(e);
     }
